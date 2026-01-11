@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: portfolio-guillaume-kere
+    env: static
+    buildCommand: echo "Building static site..."
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
