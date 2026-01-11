@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeScrollToTop();
     initializeContactForm();
     initializeSmoothScroll();
+    loadPortfolioProjects();
 });
 
 /**
@@ -372,6 +373,87 @@ document.querySelectorAll('img').forEach(img => {
 /**
  * Log message to console (for debugging)
  */
-console.log('%c Portfolio Guillaume KERE ', 'background: #2563eb; color: #fff; padding: 10px; font-size: 16px; font-weight: bold;');
-console.log('%c Développé avec ❤️ ', 'background: #1e293b; color: #fff; padding: 10px; font-size: 14px;');
+/**
+ * Load and display portfolio projects from localStorage
+ */
+function loadPortfolioProjects() {
+    const portfolioSection = document.querySelector('#portfolio .container');
+    if (!portfolioSection) return;
+    
+    // Get projects from localStorage
+    const storedProjects = localStorage.getItem('portfolio_projects');
+    let projects = [];
+    
+    if (storedProjects) {
+        projects = JSON.parse(storedProjects);
+        // Filter only published projects
+        projects = projects.filter(p => p.published);
+    }
+    
+    // Find the projects content area
+    const projectsRow = portfolioSection.querySelector('.row:last-child');
+    if (!projectsRow) return;
+    
+    if (projects.length === 0) {
+        // Show placeholder
+        projectsRow.innerHTML = `
+            <div class="col-lg-12 text-center">
+                <div class="portfolio-placeholder" data-aos="fade-up">
+                    <i class="fas fa-briefcase"></i>
+                    <p>Mes projets seront bientôt ajoutés ici</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Display projects
+    projectsRow.innerHTML = `
+        <div class="col-lg-12">
+            <div class="row g-4" id="portfolioGrid">
+                ${projects.map((project, index) => `
+                    <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="${index * 100}">
+                        <div class="portfolio-item">
+                            <div class="portfolio-image-wrapper">
+                                ${project.image ? `
+                                    <img src="${project.image}" alt="${project.title}" class="portfolio-image">
+                                ` : `
+                                    <div class="portfolio-image-placeholder">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                `}
+                                <div class="portfolio-overlay">
+                                    <div class="portfolio-overlay-content">
+                                        <span class="portfolio-category">${project.category}</span>
+                                        <h4 class="portfolio-title">${project.title}</h4>
+                                        ${project.date ? `<p class="portfolio-date"><i class="fas fa-calendar me-2"></i>${project.date}</p>` : ''}
+                                        <p class="portfolio-description">${project.description}</p>
+                                        ${project.tags && project.tags.length > 0 ? `
+                                            <div class="portfolio-tags">
+                                                ${project.tags.map(tag => `<span class="portfolio-tag">${tag}</span>`).join('')}
+                                            </div>
+                                        ` : ''}
+                                        ${project.link ? `
+                                            <a href="${project.link}" class="btn btn-primary btn-sm mt-3" target="_blank" rel="noopener">
+                                                <i class="fas fa-external-link-alt me-2"></i>Voir le projet
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    // Refresh AOS animations
+    if (typeof AOS !== 'undefined') {
+        AOS.refresh();
+    }
+}
+
+console.log('%c Portfolio Guillaume KERE ', 'background: #ff6b35; color: #fff; padding: 10px; font-size: 16px; font-weight: bold;');
+console.log('%c Développé avec ❤️ ', 'background: #1a1a1a; color: #fff; padding: 10px; font-size: 14px;');
 
