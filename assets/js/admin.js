@@ -95,7 +95,13 @@ function initializeEventListeners() {
     // Save project button
     const saveProjectBtn = document.getElementById('saveProjectBtn');
     if (saveProjectBtn) {
-        saveProjectBtn.addEventListener('click', saveProject);
+        saveProjectBtn.addEventListener('click', () => saveProject(true));
+    }
+    
+    // Save and continue button
+    const saveAndContinueBtn = document.getElementById('saveAndContinueBtn');
+    if (saveAndContinueBtn) {
+        saveAndContinueBtn.addEventListener('click', () => saveProject(false));
     }
     
     // Image file input
@@ -242,6 +248,11 @@ function openAddProjectModal() {
     document.getElementById('projectForm').reset();
     document.getElementById('projectId').value = '';
     document.getElementById('imagePreview').classList.add('d-none');
+    
+    // Show "Save and continue" button only when adding new project
+    document.getElementById('saveAndContinueBtn').style.display = 'inline-block';
+    document.getElementById('saveProjectBtn').innerHTML = '<i class="fas fa-save me-2"></i>Enregistrer et fermer';
+    
     projectModal.show();
 }
 
@@ -269,6 +280,10 @@ window.editProject = function(projectId) {
         document.getElementById('previewImg').src = project.image;
     }
     
+    // Hide "Save and continue" button when editing
+    document.getElementById('saveAndContinueBtn').style.display = 'none';
+    document.getElementById('saveProjectBtn').innerHTML = '<i class="fas fa-save me-2"></i>Enregistrer';
+    
     projectModal.show();
 };
 
@@ -288,8 +303,9 @@ window.deleteProject = function(projectId) {
 
 /**
  * Save project
+ * @param {boolean} closeModal - Whether to close the modal after saving
  */
-function saveProject() {
+function saveProject(closeModal = true) {
     const title = document.getElementById('projectTitle').value.trim();
     const date = document.getElementById('projectDate').value.trim();
     const category = document.getElementById('projectCategory').value;
@@ -328,16 +344,38 @@ function saveProject() {
         if (index !== -1) {
             projects[index] = projectData;
         }
-        showNotification('Projet mis à jour avec succès', 'success');
+        showNotification('✅ Projet mis à jour avec succès !', 'success');
     } else {
         // Add new project
         projects.unshift(projectData);
-        showNotification('Projet ajouté avec succès', 'success');
+        showNotification('✅ Projet ajouté avec succès !', 'success');
     }
     
     saveProjectsToStorage();
     displayProjects();
-    projectModal.hide();
+    
+    if (closeModal) {
+        // Close modal after a delay to show success message
+        setTimeout(() => {
+            projectModal.hide();
+            // Reset form after modal closes
+            setTimeout(() => {
+                document.getElementById('projectForm').reset();
+                document.getElementById('imagePreview').classList.add('d-none');
+                editingProjectId = null;
+            }, 300);
+        }, 1200);
+    } else {
+        // Keep modal open but reset form for new entry
+        setTimeout(() => {
+            document.getElementById('projectForm').reset();
+            document.getElementById('imagePreview').classList.add('d-none');
+            editingProjectId = null;
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle me-2"></i>Ajouter un projet';
+            // Refocus on first field
+            document.getElementById('projectTitle').focus();
+        }, 800);
+    }
 }
 
 /**
@@ -398,33 +436,47 @@ function generateId() {
  * Show notification
  */
 function showNotification(message, type = 'info') {
+    // Remove any existing notifications first
+    const existingNotifications = document.querySelectorAll('.notification-toast');
+    existingNotifications.forEach(notif => notif.remove());
+    
     const notification = document.createElement('div');
     notification.className = `alert alert-${type === 'error' ? 'danger' : type} notification-toast`;
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        z-index: 9999;
-        min-width: 300px;
+        z-index: 99999;
+        min-width: 350px;
         max-width: 500px;
-        padding: 1rem 1.5rem;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        animation: slideInRight 0.3s ease;
+        padding: 1.25rem 1.75rem;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        animation: slideInRight 0.4s ease;
+        font-weight: 600;
+        font-size: 1.05rem;
+        border: none;
     `;
+    
+    const iconClass = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle';
+    const iconSize = '1.5rem';
+    
     notification.innerHTML = `
         <div class="d-flex align-items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+            <i class="fas fa-${iconClass} me-3" style="font-size: ${iconSize};"></i>
             <span>${message}</span>
         </div>
     `;
     
     document.body.appendChild(notification);
     
+    // Keep notification longer for success messages
+    const displayTime = type === 'success' ? 2500 : 3000;
+    
     setTimeout(() => {
-        notification.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+        notification.style.animation = 'slideOutRight 0.4s ease';
+        setTimeout(() => notification.remove(), 400);
+    }, displayTime);
 }
 
 /**
