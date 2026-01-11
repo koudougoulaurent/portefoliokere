@@ -43,11 +43,16 @@ document.addEventListener('DOMContentLoaded', function() {
  * Check authentication status
  */
 function checkAuth() {
-    const isAuthenticated = sessionStorage.getItem(CONFIG.authKey);
-    
-    if (isAuthenticated === 'true') {
-        showDashboard();
-    } else {
+    try {
+        const isAuthenticated = sessionStorage.getItem(CONFIG.authKey);
+        
+        if (isAuthenticated === 'true') {
+            showDashboard();
+        } else {
+            showLogin();
+        }
+    } catch (error) {
+        console.warn('⚠️ sessionStorage inaccessible:', error.message);
         showLogin();
     }
 }
@@ -127,11 +132,17 @@ function handleLogin(e) {
     const password = document.getElementById('password').value;
     
     if (username === CONFIG.username && password === CONFIG.password) {
-        sessionStorage.setItem(CONFIG.authKey, 'true');
-        showNotification('Connexion réussie !', 'success');
-        showDashboard();
+        try {
+            sessionStorage.setItem(CONFIG.authKey, 'true');
+            showNotification('✅ Connexion réussie !', 'success');
+            showDashboard();
+        } catch (error) {
+            console.warn('⚠️ sessionStorage bloqué, connexion temporaire:', error.message);
+            showNotification('⚠️ Connexion temporaire (stockage désactivé)', 'warning');
+            showDashboard();
+        }
     } else {
-        showNotification('Identifiants incorrects', 'error');
+        showNotification('❌ Identifiants incorrects', 'error');
     }
 }
 
@@ -139,8 +150,12 @@ function handleLogin(e) {
  * Handle logout
  */
 function handleLogout() {
-    sessionStorage.removeItem(CONFIG.authKey);
-    showNotification('Déconnexion réussie', 'success');
+    try {
+        sessionStorage.removeItem(CONFIG.authKey);
+    } catch (error) {
+        console.warn('⚠️ sessionStorage inaccessible lors de la déconnexion');
+    }
+    showNotification('✅ Déconnexion réussie', 'success');
     showLogin();
 }
 
@@ -148,12 +163,19 @@ function handleLogout() {
  * Load projects from localStorage
  */
 function loadProjects() {
-    const storedProjects = localStorage.getItem(CONFIG.storageKey);
-    if (storedProjects) {
-        projects = JSON.parse(storedProjects);
-    } else {
-        // Add demo projects
+    try {
+        const storedProjects = localStorage.getItem(CONFIG.storageKey);
+        if (storedProjects) {
+            projects = JSON.parse(storedProjects);
+        } else {
+            // Add demo projects
+            projects = [];
+        }
+    } catch (error) {
+        console.warn('⚠️ localStorage inaccessible:', error.message);
+        console.info('💡 Solution: Désactivez la prévention du tracking pour ce site ou utilisez un autre navigateur.');
         projects = [];
+        showStorageError();
     }
     updateStatistics();
     displayProjects();
@@ -163,8 +185,14 @@ function loadProjects() {
  * Save projects to localStorage
  */
 function saveProjectsToStorage() {
-    localStorage.setItem(CONFIG.storageKey, JSON.stringify(projects));
-    updateStatistics();
+    try {
+        localStorage.setItem(CONFIG.storageKey, JSON.stringify(projects));
+        updateStatistics();
+    } catch (error) {
+        console.error('❌ Impossible de sauvegarder:', error.message);
+        showNotification('⚠️ Erreur: Impossible de sauvegarder. Le stockage est bloqué par votre navigateur.', 'error');
+        showStorageError();
+    }
 }
 
 /**
@@ -514,5 +542,79 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+/**
+ * Show storage error banner
+ */
+function showStorageError() {
+    const dashboard = document.getElementById('adminDashboard');
+    if (!dashboard || document.getElementById('storageErrorBanner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'storageErrorBanner';
+    banner.className = 'alert alert-warning storage-error-banner';
+    banner.style.cssText = `
+        position: fixed;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9998;
+        max-width: 800px;
+        width: 90%;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    `;
+    banner.innerHTML = `
+        <div class="d-flex align-items-start">
+            <i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem; color: #f59e0b;"></i>
+            <div style="flex: 1;">
+                <h5 class="mb-2"><strong>⚠️ Stockage bloqué</strong></h5>
+                <p class="mb-2">Votre navigateur bloque l'accès au stockage local. Vos projets ne seront pas sauvegardés.</p>
+                <details>
+                    <summary style="cursor: pointer; font-weight: 600;">💡 Solutions (cliquez pour voir)</summary>
+                    <div class="mt-2">
+                        <p><strong>Option 1 - Edge/Chrome:</strong></p>
+                        <ol>
+                            <li>Cliquez sur l'icône 🛡️ (bouclier) dans la barre d'adresse</li>
+                            <li>Désactivez "Prévention du pistage" pour ce site</li>
+                            <li>Rafraîchissez la page (F5)</li>
+                        </ol>
+                        <p><strong>Option 2 - Ouvrir en local:</strong></p>
+                        <ol>
+                            <li>Utilisez un serveur local (ex: Live Server dans VS Code)</li>
+                            <li>Ou ouvrez avec: <code>file:///chemin/vers/admin.html</code> dans Chrome</li>
+                        </ol>
+                        <p><strong>Option 3 - Une fois déployé:</strong></p>
+                        <ol>
+                            <li>Sur Render (HTTPS), le problème disparaîtra automatiquement</li>
+                        </ol>
+                    </div>
+                </details>
+            </div>
+            <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+}
+
+/**
+ * Check if storage is available
+ */
+function isStorageAvailable() {
+    try {
+        const test = '__storage_test__';
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 console.log('%c Admin Panel Loaded ', 'background: #ff6b35; color: #fff; padding: 10px; font-size: 14px; font-weight: bold;');
+
+// Check storage availability on load
+if (!isStorageAvailable()) {
+    console.warn('%c ⚠️ ATTENTION: localStorage est bloqué ', 'background: #f59e0b; color: #000; padding: 8px; font-size: 12px; font-weight: bold;');
+    console.info('%c 💡 Désactivez la "Prévention du tracking" dans les paramètres de votre navigateur ', 'background: #3b82f6; color: #fff; padding: 8px; font-size: 12px;');
+}
 

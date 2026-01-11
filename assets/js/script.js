@@ -381,13 +381,18 @@ function loadPortfolioProjects() {
     if (!portfolioSection) return;
     
     // Get projects from localStorage
-    const storedProjects = localStorage.getItem('portfolio_projects');
     let projects = [];
     
-    if (storedProjects) {
-        projects = JSON.parse(storedProjects);
-        // Filter only published projects
-        projects = projects.filter(p => p.published);
+    try {
+        const storedProjects = localStorage.getItem('portfolio_projects');
+        if (storedProjects) {
+            projects = JSON.parse(storedProjects);
+            // Filter only published projects
+            projects = projects.filter(p => p.published);
+        }
+    } catch (error) {
+        console.warn('⚠️ localStorage inaccessible pour le chargement des projets:', error.message);
+        // Continue with empty projects array
     }
     
     // Find the projects content area
